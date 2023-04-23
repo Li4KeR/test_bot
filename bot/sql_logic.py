@@ -61,22 +61,50 @@ def check_sql():
         return False
 
 
-def sql_add_master():
-    pass
+def sql_add_master(master_name, description):
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(f"INSERT INTO masters(name, description) VALUES('{master_name}',{description}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new master: {error}"
+        print(error_text)
 
 
-def sql_all_service():
-    pass
+def sql_add_service(service_name, price, time):
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(f"INSERT INTO services(name, price, time) VALUES('{service_name}',{price}, {time}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new service: {error}"
+        print(error_text)
 
 
-def sql_add_job_calendar():
-    pass
+def sql_add_job_calendar(id_master, date, time_start, time_end):
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(f"INSERT INTO job_calendar(id_master, date, time_start, time_end) VALUES('{id_master}',{date}, {time_start}, {time_end}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new service: {error}"
+        print(error_text)
 
 
-def sql_services_schedule():
+def sql_add_services_schedule():
     pass
 
 
 def sql_add_client():
+    pass
+
+
+def sql_add_master_skills():
     pass
 
