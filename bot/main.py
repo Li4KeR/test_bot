@@ -23,10 +23,8 @@ from sql_logic import check_sql
 
 
 token = '6161217114:AAFeSrYVhOx7is3vJiLYADJet6eiCxbO34Q'
-
-
 # logging.basicConfig(level=logging.INFO, format = "%(asctime)s - %(levelname)s - %(funcName)s: %(lineno)d - %(message)s", filename=log_path, )
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO, format = "%(asctime)s - %(levelname)s - %(funcName)s: %(lineno)d - %(message)s")
 bot = Bot(token=token)
 dp = Dispatcher(bot)
 
