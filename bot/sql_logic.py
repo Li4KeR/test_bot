@@ -21,6 +21,17 @@ def check_sql():
                                     time TEXT);
                                     """)
 
+        cursor.execute("""CREATE TABLE IF NOT EXISTS categories(
+                                            id INTEGER PRIMARY KEY,
+                                            name TEXT NOT NULL);
+                                            """)
+
+        cursor.execute("""CREATE TABLE IF NOT EXISTS services_category(
+                                            id INTEGER PRIMARY KEY,
+                                            id_category TEXT NOT NULL,
+                                            id_service TEXT NOT NULL);
+                                            """)
+
         cursor.execute("""CREATE TABLE IF NOT EXISTS master_skills(
                                             id INTEGER PRIMARY KEY,
                                             id_master INTEGER,
@@ -52,36 +63,14 @@ def check_sql():
                                                     payment TEXT);
                                                     """)
 
-        cursor.execute("""CREATE TABLE IF NOT EXISTS services_schedule(
-                                                    id INTEGER PRIMARY KEY,
-                                                    id_master INTEGER,
-                                                    id_client INTEGER,
-                                                    date TEXT,
-                                                    time_start TEXT,
-                                                    time_end TEXT,
-                                                    payment TEXT);
-                                                    """)
-
-        cursor.execute("""CREATE TABLE IF NOT EXISTS services_schedule(
-                                                    id INTEGER PRIMARY KEY,
-                                                    id_master INTEGER,
-                                                    id_client INTEGER,
-                                                    date TEXT,
-                                                    time_start TEXT,
-                                                    time_end TEXT,
-                                                    payment TEXT);
-                                                    """)
-
-        cursor.execute("""CREATE TABLE IF NOT EXISTS services_for_masters(
+        cursor.execute("""CREATE TABLE IF NOT EXISTS schedule(
                                                             id INTEGER PRIMARY KEY,
-                                                            name_service TEXT);
+                                                            id_master TEXT,
+                                                            id_client TEXT,
+                                                            id_service TEXT,
+                                                            date TEXT);
                                                             """)
 
-        cursor.execute("""CREATE TABLE IF NOT EXISTS links_service_master(
-                                                            id INTEGER PRIMARY KEY,
-                                                            id_master INTEGER,
-                                                            id_service INTEGER);
-                                                            """)
 
         conn.commit()
         cursor.close()
@@ -93,10 +82,11 @@ def check_sql():
 
 
 def sql_add_master(master_name, description):
+    """ добавить мастера """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
-        cursor.execute(f"INSERT INTO masters(name, description) VALUES('{master_name}',{description}')")
+        cursor.execute(f"INSERT INTO masters(name, description) VALUES('{master_name}','{description}')")
         conn.commit()
         cursor.close()
     except sqlite3.Error as error:
@@ -104,7 +94,21 @@ def sql_add_master(master_name, description):
         print(error_text)
 
 
+def sql_add_category(name_category):
+    """ добавить категорию """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(f"INSERT INTO categories(name) VALUES('{name_category}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new service: {error}"
+        print(error_text)
+
+
 def sql_add_service(service_name, price, time):
+    """ добавить услугу """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
@@ -117,10 +121,12 @@ def sql_add_service(service_name, price, time):
 
 
 def sql_add_job_calendar(id_master, date, time_start, time_end):
+    """ добавить дату работы мастера """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
-        cursor.execute(f"INSERT INTO job_calendar(id_master, date, time_start, time_end) VALUES('{id_master}','{date}', '{time_start}', '{time_end}')")
+        cursor.execute(
+            f"INSERT INTO job_calendar(id_master, date, time_start, time_end) VALUES('{id_master}','{date}', '{time_start}', '{time_end}')")
         conn.commit()
         cursor.close()
     except sqlite3.Error as error:
@@ -128,20 +134,8 @@ def sql_add_job_calendar(id_master, date, time_start, time_end):
         print(error_text)
 
 
-def sql_add_services_schedule(id_master, id_client, date, time_start, time_end, payment):
-    try:
-        conn = sqlite3.connect('base.db')
-        cursor = conn.cursor()
-        cursor.execute(
-            f"INSERT INTO services_schedule(id_master, id_client,  date, time_start, time_end, payment) VALUES('{id_master}', '{id_client}', '{date}', '{time_start}', '{time_end}', '{payment}')")
-        conn.commit()
-        cursor.close()
-    except sqlite3.Error as error:
-        error_text = f"Error add new services schedule: {error}"
-        print(error_text)
-
-
 def sql_add_client(id_telegram, fio, phone):
+    """ добавить клиента """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
@@ -155,6 +149,7 @@ def sql_add_client(id_telegram, fio, phone):
 
 
 def sql_add_master_skills(id_master, id_service):
+    """ добавить навыки для мастера """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
@@ -167,3 +162,46 @@ def sql_add_master_skills(id_master, id_service):
         print(error_text)
 
 
+def sql_get_all_category():
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_cat = cursor.execute("SELECT id, name from categories").fetchall()
+    return all_cat
+
+
+def sql_get_name_cat(id_cat):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_cat = cursor.execute(f"SELECT name FROM categories WHERE id='{id_cat}'").fetchall()[0]
+    return all_cat
+
+
+def sql_get_all_services(id_category):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_services = cursor.execute(
+        f"SELECT services.id, services.name FROM services, services_category WHERE "
+        f"services.id=services_category.id_service and services_category.id_category={id_category}").fetchall()
+    return all_services
+
+
+def sql_get_name_service(id_service):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    name_service = cursor.execute(f"SELECT name FROM services WHERE id='{id_service}'").fetchall()[0]
+    return name_service
+
+
+def sql_get_service_master(id_service):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_masters = cursor.execute(f"SELECT masters.id, masters.name FROM masters, master_skills "
+                                 f"WHERE masters.id=master_skills.id_master AND master_skills.id_service={id_service}").fetchall()
+    return all_masters
+
+
+def sql_get_name_master(id_master):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    name_master = cursor.execute(f"SELECT name FROM masters WHERE id='{id_master}'").fetchall()[0]
+    return name_master
