@@ -16,7 +16,7 @@ def create_main_menu():
 
 def create_menu_all_reg(id_telegram):
     """ создание меню с записями клиента """
-    id_client = sql_get_id_client(id_telegram)
+    id_client = sql_get_id_client(id_telegram)[0]
     all_my_reg = sql_get_all_reg_client(id_client)
     menu = types.InlineKeyboardMarkup(row_width=2)
     menu.add(
@@ -48,7 +48,8 @@ def create_menu_service(id_category):
     menu = types.InlineKeyboardMarkup(row_width=2)
     category_name = sql_get_name_cat(id_category)
     services = sql_get_all_services(id_category)
-    menu.add(*[InlineKeyboardButton(button[1], callback_data=f"service_{id_category}_{button[0]}") for button in services])
+    print(services)
+    menu.add(*[InlineKeyboardButton(button[1], callback_data=f"service_{button[0]}") for button in services])
     menu.add(InlineKeyboardButton(text="Главное меню", callback_data="main_menu"))
     return menu, category_name
 
@@ -57,6 +58,7 @@ def create_menu_masters(id_service):
     """ создание меню мастеров с нужной услугой """
     menu = types.InlineKeyboardMarkup(row_width=2)
     name_service = sql_get_name_service(id_service)
+    print(id_service)
     masters = sql_get_service_master(id_service)
     menu.add(*[InlineKeyboardButton(button[1], callback_data=f"master_{button[0]}") for button in masters])
     menu.add(InlineKeyboardButton(text="Главное меню", callback_data="main_menu"))

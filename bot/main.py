@@ -38,7 +38,9 @@ async def main_menu_cb(call: types.CallbackQuery):
     """ Инфо о салоне """
     main_menu = create_back_to_main()
     await call.message.edit_text(
-        text="Это очень крутой салон! Мега топчик! Записывайся и будь самой красивой епта!"
+        text="О нас: Салон красоты «AvRorrra»предлагает спектр услуг для красоты и здоровья, "
+             "дарит радость и хорошее настроение)🌺✨\nНаш адрес: "
+             "г. Москва, ул. Стромынка, 22. Телефон салона красоты +7(918)461-83-19"
     )
     await call.message.edit_reply_markup(reply_markup=main_menu)
     await call.answer()
@@ -114,7 +116,6 @@ async def nav_cal_handler(call: types.CallbackQuery, state: FSMContext):
     await state.update_data(id_master=id_master)
     await call.message.edit_text(text="Выберете дату:")
     await call.message.edit_reply_markup(reply_markup=await SimpleCalendar().start_calendar())
-    # await call.answer("Please select a date: ", reply_markup=await SimpleCalendar().start_calendar())
 
 
 @dp.callback_query_handler(simple_cal_callback.filter())
@@ -122,18 +123,7 @@ async def process_simple_calendar(callback_query: types.CallbackQuery, callback_
     """ отлов событий на календаре """
     selected, date = await SimpleCalendar().process_selection(callback_query, callback_data)
     await state.update_data(date=date)
-    data = await state.get_data()
-    print(data['telegram_id'])
-    print(data['category'])
-    print(data['service'])
-    print(data['master'])
     if selected:
-        # await callback_query.message.answer(
-        #     f'Вы записались к {data["master"]}\n'
-        #     f'На услугу {data["service"]}\n'
-        #     f'Дата: {data["date"].strftime("%d.%m.%Y")}',
-        #     reply_markup=create_main_menu()
-        # )
         await callback_query.message.answer(text="Введите Ваши ФИО")  # , reply_markup=create_main_menu()
         await NewSales.client_name.set()
 
@@ -165,31 +155,28 @@ async def enter_phones(message: types.Message, state: FSMContext):
     phone = data['phone']
     price = sql_get_price(id_service)[0]
     check_tele = sql_check_telegram(tele_id)
-    print(check_tele)
     menu = create_back_to_main()
     if check_tele == []:
-        id_client = sql_create_client(tele_id, client_name, phone)
+        sql_add_client(tele_id, client_name, phone)
+        id_client = sql_check_telegram(tele_id)[0][0]
     else:
-        id_client = check_tele[0]
+        id_client = check_tele[0][0]
     sql_add_sale(id_master, id_client, id_service, date)
     await message.answer(text=f"Вы записаны к мастеру: {master}\n"
                               f"На услугу: {service}\n"
                               f"Дата: {date}\n"
                               f"Стоимость: {price}", reply_markup=menu)
-    # await message.edit_reply_markup(reply_markup=menu)
+    for operator in operators:
+        urll = f"tg://user?id='{tele_id}'"
+        cb = types.InlineKeyboardMarkup(row_width=1)
+        cb.add(InlineKeyboardButton(text='Написать клиенту', url=urll))
+        await bot.send_message(operator, f"Запись пользователя: {client_name}\n"
+                                         f"Дата: {date}\n"
+                                         f"Телефон: {phone}\n"
+                                         f"К кому: {master}\n"
+                                         f"Услуга: {service}\n"
+                                         f"Стоимость: {price}", reply_markup=cb)
 
-    operator = '853337288'
-    urll = f"tg://user?id={tele_id}"
-    cb = types.InlineKeyboardMarkup(row_width=1)
-    cb.add(InlineKeyboardButton(text='Написать челу', url=urll))
-    await bot.send_message(operator, f"Запись пользователя: {client_name}\n"
-                                     f"Дата: {date}\n"
-                                     f"Телефон: {phone}\n"
-                                     f"К кому: {master}\n"
-                                     f"Услуга: {service}\n"
-                                     f"Стоимость: {price}", reply_markup=cb)
-
-    # await call.answer()
 
 
 """ ---------------- admin -----------------"""
@@ -198,10 +185,16 @@ async def enter_phones(message: types.Message, state: FSMContext):
 @dp.message_handler(commands="admin")
 async def admin(message: types.Message):
     """ меню админа"""
-    main_menu = create_menu_admin()
-    await message.answer(
-        text="Салют, админ!\n"
-             "Выберите что посмотреть\исправить\добавить:", reply_markup=main_menu)
+    print(message.from_user.id)
+    print(admins)
+    if message.from_user.id in admins:
+        main_menu = create_menu_admin()
+        await message.answer(
+            text="Салют, админ!\n"
+                 "Выберите что посмотреть\исправить\добавить:", reply_markup=main_menu)
+    else:
+        await message.answer(
+            text="Тебя нет в админке, пиши админу!", reply_markup=create_back_to_main())
 
 
 @dp.callback_query_handler(lambda call: "ADMINmain" in call.data)
@@ -247,8 +240,8 @@ async def enter_phones(message: types.Message, state: FSMContext):
     data = await state.get_data()
     await state.finish()
     sql_add_master(data['name'], data['description'])
-    main_menu = create_menu_admin()
-    await message.answer('мастер добавлен', reply_markup=main_menu)
+    menu = create_menu_return_main_admin()
+    await message.answer('мастер добавлен', reply_markup=menu)
 
 
 @dp.callback_query_handler(lambda call: "AddCategory" in call.data)
@@ -264,11 +257,11 @@ async def admin_add_category(call: types.CallbackQuery, state: FSMContext):
 async def admin_enter_cat_name(message: types.Message, state: FSMContext):
     """ добавление категории в бд """
     await state.update_data(name=message.text)
-    main_menu = create_menu_admin()
+    menu = create_menu_return_main_admin()
     data = await state.get_data()
     await state.finish()
     sql_add_category(data['name'])
-    await message.answer('Категория добавлена', reply_markup=main_menu)
+    await message.answer('Категория добавлена', reply_markup=menu)
 
 
 @dp.callback_query_handler(lambda call: "AddService" in call.data)
@@ -300,11 +293,11 @@ async def add_service_price(message: types.Message, state: FSMContext):
 async def admin_enter_cat_name(message: types.Message, state: FSMContext):
     """ добавление категории в бд """
     await state.update_data(time=message.text)
-    main_menu = create_menu_admin()
+    menu = create_menu_return_main_admin()
     data = await state.get_data()
     await state.finish()
     sql_add_service(data['name'], data['price'], data['time'])
-    await message.answer('Услуга добавлена', reply_markup=main_menu)
+    await message.answer('Услуга добавлена', reply_markup=menu)
 
 
 @dp.callback_query_handler(lambda call: "AddRelation" in call.data)
@@ -330,9 +323,14 @@ async def admin_add_relation_all_cat(call: types.CallbackQuery):
 async def admin_add_relation_all_service_cat(call: types.CallbackQuery):
     """ меню выбора усдуг с выбранной категорией """
     id_category = call.data.split("_")[1]
-    menu = create_menu_relation_old_category_service(id_category)
-    await call.message.edit_text(text="Выбери услугу")
-    await call.message.edit_reply_markup(reply_markup=menu)
+    menu, check = create_menu_relation_old_category_service(id_category)
+    print(menu)
+    if check == False:
+        await call.message.edit_text(text="В этой категории еще нет услуг")
+        await call.message.edit_reply_markup(reply_markup=menu)
+    else:
+        await call.message.edit_text(text="Выбери услугу")
+        await call.message.edit_reply_markup(reply_markup=menu)
     await call.answer()
 
 
@@ -356,7 +354,7 @@ async def admin_add_relation_service_done(call: types.CallbackQuery, state: FSMC
     category_id = call.data.split("_")[1]
     category_name = sql_get_name_cat(category_id)
     service_id = data["service_id"]
-    menu = create_menu_return_main_admin(service_id)
+    menu = create_menu_return_main_admin()
     await state.update_data(category_id=category_id)
     await state.update_data(category_name=category_name)
     await state.finish()
@@ -412,7 +410,6 @@ async def create_menu_rel_master(call: types.CallbackQuery):
 async def create_menu_all_cat_masters(call: types.CallbackQuery, state: FSMContext):
     """ меню выбора категории для мастера """
     master_id = call.data.split("_")[1]
-    print(master_id)
     menu = create_menu_all_cat_for_master()
     await state.update_data(master_id=master_id)
     await call.message.edit_text(text=f"Выбери категорию")
@@ -423,32 +420,33 @@ async def create_menu_all_cat_masters(call: types.CallbackQuery, state: FSMConte
 @dp.callback_query_handler(lambda call: "RelationCatMaster" in call.data)
 async def create_menu_all_service_masters(call: types.CallbackQuery, state: FSMContext):
     """ меню выбора услуги для мастера """
-    master_id = call.data.split("_")[1]
-    menu = create_menu_all_master_service(master_id)
-    await state.update_data(master_id=master_id)
+    category_id = call.data.split("_")[1]
+    menu = create_menu_all_master_service(category_id)
+    # await state.update_data(master_id=master_id)
     await call.message.edit_text(text=f"Выбери услугу")
     await call.message.edit_reply_markup(reply_markup=menu)
     await call.answer()
 
 
 @dp.callback_query_handler(lambda call: "RelationServiceMaster" in call.data)
-async def create_menu_back_to_main(call: types.CallbackQuery, state: FSMContext):
+async def create_menu_skills_bd(call: types.CallbackQuery, state: FSMContext):
     """ запись скилов в бд """
     data = await state.get_data()
     await state.finish()
     service_id = call.data.split("_")[1]
-    service_name = sql_get_name_service(service_id)[0]
+    service_name = sql_get_name_service(service_id)
     master_id = data['master_id']
     master_name = sql_get_name_master(master_id)[0]
     menu = create_menu_return_main_admin()
     sql_add_relation_master(master_id, service_id)
-    await call.message.edit_text(text=f"Вы добавили {master_name} услугу {service_name}")
+    await call.message.edit_text(text=f"Вы добавили мастеру: {master_name}\n"
+                                      f"услугу: {service_name}")
     await call.message.edit_reply_markup(reply_markup=menu)
     await call.answer()
 
 
 @dp.callback_query_handler(lambda call: "AdminSelect" in call.data)
-async def create_menu_back_to_main(call: types.CallbackQuery):
+async def create_menu_select(call: types.CallbackQuery):
     """ Показ того, что можно посмотреть """
     menu = create_menu_select_admin()
     await call.message.edit_text(text="Что хочешь глянуть?")
@@ -457,7 +455,7 @@ async def create_menu_back_to_main(call: types.CallbackQuery):
 
 
 @dp.callback_query_handler(lambda call: "AdminDelete" in call.data)
-async def create_menu_back_to_main(call: types.CallbackQuery):
+async def create_menu_main_delete(call: types.CallbackQuery):
     """ Показ того, что можно удалить """
     menu = create_menu_delete_admin()
     await call.message.edit_text(text="Что хочешь удалить?")
@@ -465,20 +463,194 @@ async def create_menu_back_to_main(call: types.CallbackQuery):
     await call.answer()
 
 
-@dp.callback_query_handler(lambda call: "AdminDeleteMaster" in call.data)
-async def create_menu_back_to_main(call: types.CallbackQuery):
+@dp.callback_query_handler(lambda call: "AdminMasterDelete" in call.data)
+async def create_menu_delte_master(call: types.CallbackQuery):
     """ Показ всех мастеров для удаления """
-    menu = create_menu_master_delete_admin()
-    await call.message.edit_text(text="Что хочешь удалить?")
+    menu = create_menu_main_master_delete_admin()
+    await call.message.edit_text(text="Какого мастера удалить?")
     await call.message.edit_reply_markup(reply_markup=menu)
     await call.answer()
 
 
 @dp.callback_query_handler(lambda call: "DeleteMaster" in call.data)
-async def create_menu_back_to_main(call: types.CallbackQuery):
-    """ Показ всех мастеров для удаления """
-    menu = create_menu_master_delete_admin()
-    await call.message.edit_text(text="Что хочешь удалить?")
+async def create_menu_delte_master(call: types.CallbackQuery):
+    """ Показ инфы о мастере и выбор что делать """
+    master_id = call.data.split("_")[1]
+    menu, master_name, master_description = create_menu_master_delete_admin(master_id)
+    await call.message.edit_text(text=f"Что сделать с мастером {master_name}?\n"
+                                      f"{master_description}")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "DeleteBDMaster" in call.data)
+async def create_menu_delete_master_done(call: types.CallbackQuery):
+    """ Удаление мастера из бд """
+    master_id = call.data.split("_")[1]
+    master_name = sql_get_name_master(master_id)[0]
+    sql_delete_master(master_id)
+    menu = create_menu_return_main_admin()
+    await call.message.edit_text(text=f"Мастер {master_name} удален!")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "EditBDMaster" in call.data)
+async def create_menu_delte_master_done(call: types.CallbackQuery, state: FSMContext):
+    """ Редактирование мастера в бд """
+    master_id = call.data.split("_")[1]
+    master_name = sql_get_name_master(master_id)[0]
+    await state.update_data(master_id=master_id)
+    await call.message.edit_text(text=f"Выберете новое имя мастера!\n"
+                                      f"Прошлое имя: {master_name}")
+    # await call.message.edit_reply_markup(reply_markup=menu)
+    await RenameMaster.master_name.set()
+    await call.answer()
+
+
+@dp.message_handler(state=RenameMaster.master_name)
+async def enter_phones(message: types.Message, state: FSMContext):
+    """ Запись имени и ожидание ввода описания """
+    data = await state.get_data()
+    master_id = data["master_id"]
+    master_description = sql_get_info_master(master_id)[1]
+    await state.update_data(master_name=message.text)
+    await message.answer(f'Введите описание мастера!\n'
+                         f'Старое описание: {master_description}')
+    await RenameMaster.master_description.set()
+
+
+@dp.message_handler(state=RenameMaster.master_description)
+async def enter_descript_master(message: types.Message, state: FSMContext):
+    """ Запись описания и изменение в бд """
+    # await RenameMaster.master_description(message.text)
+    await state.update_data(master_description=message.text)
+    data = await state.get_data()
+    await state.finish()
+    master_id = data['master_id']
+    master_name = data['master_name']
+    master_description = data['master_description']
+    old_data = sql_get_info_master(master_id)
+    old_master_name = old_data[0]
+    old_master_description = old_data[1]
+    sql_edit_master(master_id, master_name, master_description)
+    menu = create_menu_return_main_admin()
+    await message.answer(text=f'Изменения мастера:\n'
+                              f'Имя: {old_master_name} => {master_name}\n'
+                              f'Описание: {old_master_description} = >{master_description}\n',
+                         reply_markup=menu)
+
+
+@dp.callback_query_handler(lambda call: "DeleteServiceAdmin" in call.data)
+async def create_main_menu_delete_service(call: types.CallbackQuery):
+    """ Показ всех услуг для удаления """
+    menu = create_main_menu_service_delete_admin()
+    await call.message.edit_text(text="Какую услугу удалить?")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "DeleteService" in call.data)
+async def create_menu_delete_service(call: types.CallbackQuery):
+    """ Показ всей инфы об услуге """
+    service_id = call.data.split("_")[1]
+    menu, service_name, service_price, service_time = create_menu_service_delete_admin(service_id)
+    await call.message.edit_text(text=f"Услуга: {service_name}\n"
+                                      f"Цена: {service_price}\n"
+                                      f"Время: {service_time}")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "DeleteBDService" in call.data)
+async def create_menu_delete_service_done(call: types.CallbackQuery):
+    """ Удаление услуги из бд """
+    service_id = call.data.split("_")[1]
+    service_name = sql_get_name_service(service_id)
+    sql_delete_service(service_id)
+    menu = create_menu_return_main_admin()
+    await call.message.edit_text(text=f"Услуга {service_name} удалена!")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "EditBDService" in call.data)
+async def create_menu_delte_master_done(call: types.CallbackQuery, state: FSMContext):
+    """ Редактирование услуги в бд """
+    service_id = call.data.split("_")[1]
+    old_service_name = sql_get_name_service(service_id)[0]
+    await state.update_data(service_id=service_id)
+    await call.message.edit_text(text=f"Введите новое имя для {old_service_name}!")
+    # await call.message.edit_reply_markup(reply_markup=menu)
+    await RenameService.service_name.set()
+    await call.answer()
+
+
+@dp.message_handler(state=RenameService.service_name)
+async def enter_phones(message: types.Message, state: FSMContext):
+    """ Запись имени и ожидание ввода описания """
+    data = await state.get_data()
+    service_id = data["service_id"]
+    old_service_price = sql_get_price(service_id)
+    await state.update_data(service_name=message.text)
+    await message.answer(f'Введите новую цену для услуги {data["service_name"]}!\n'
+                         f'Старая цена: {old_service_price}')
+    await RenameService.service_time.set()
+
+
+@dp.message_handler(state=RenameService.service_time)
+async def enter_descript_master(message: types.Message, state: FSMContext):
+    """ Запись времени и изменение в бд """
+    await state.update_data(service_time=message.text)
+    data = await state.get_data()
+    await state.finish()
+    service_id = data['service_id']
+    service_name = data['service_name']
+    service_price = data['service_price']
+    service_time = data['service_time']
+    old_data = sql_get_all_info_service(service_id)
+    old_service_name = old_data[0]
+    old_service_price = old_data[1]
+    old_service_time = old_data[2]
+    sql_edit_service(service_id, service_name, service_price, service_time)
+    menu = create_menu_return_main_admin()
+    await message.answer(text=f'Изменения услуги:\n'
+                              f'Имя: {old_service_name} => {service_name}\n'
+                              f'Цена: {old_service_price} => {service_price}\n'
+                              f'Время: {old_service_time} => {service_time}',
+                         reply_markup=menu)
+
+
+
+@dp.callback_query_handler(lambda call: "DeleteCategoryAdmin" in call.data)
+async def create_menu_delete_service(call: types.CallbackQuery):
+    """ Показ всех категорий для удаления """
+    menu = create_main_menu_category_delete_admin()
+    await call.message.edit_text(text="Какую категорию удалить?")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "DeleteService" in call.data)
+async def create_menu_delete_service(call: types.CallbackQuery):
+    """ Показ всей инфы о категории """
+    category_id = call.data.split("_")[1]
+    category_name = sql_get_name_cat(category_id)
+    menu = create_menu_caterory_delete_admin(category_id)
+    # menu, service_name, service_price, service_time = create_menu_service_delete_admin(service_id)
+    await call.message.edit_text(text=f"Категория: {category_name}\n")
+    await call.message.edit_reply_markup(reply_markup=menu)
+    await call.answer()
+
+
+@dp.callback_query_handler(lambda call: "DeleteCategory" in call.data)
+async def create_menu_delete_service_done(call: types.CallbackQuery):
+    """ Удаление категории из бд """
+    category_id = call.data.split("_")[1]
+    category_name = sql_get_name_cat(category_id)
+    sql_delete_category(category_id)
+    menu = create_menu_return_main_admin()
+    await call.message.edit_text(text=f"Категория {category_name} удалена!")
     await call.message.edit_reply_markup(reply_markup=menu)
     await call.answer()
 

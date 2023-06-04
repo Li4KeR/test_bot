@@ -188,6 +188,34 @@ def sql_add_relation_master(master_id, service_id):
         print(error_text)
 
 
+def sql_add_sale(id_master, id_client, id_service, date):
+    """ добавить запись в бд """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            f"INSERT INTO schedule(id_master, id_client, id_service, date) VALUES('{id_master}', '{id_client}', '{id_service}', '{date}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new services schedule: {error}"
+        print(error_text)
+
+
+def sql_add_client(id_telegram, fio, phone):
+    """ добавить клиента в бд """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            f"INSERT INTO clients(id_telegram, fio, phone) VALUES('{id_telegram}', '{fio}', '{phone}')")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new services schedule: {error}"
+        print(error_text)
+
+
 def sql_get_id_client(id_telegram):
     conn = sqlite3.connect('base.db')
     cursor = conn.cursor()
@@ -249,6 +277,7 @@ def sql_get_service_master(id_service):
     cursor = conn.cursor()
     all_masters = cursor.execute(f"SELECT masters.id, masters.name FROM masters, master_skills "
                                  f"WHERE masters.id=master_skills.id_master AND master_skills.id_service={id_service}").fetchall()
+    print(all_masters)
     return all_masters
 
 
@@ -287,31 +316,105 @@ def sql_check_telegram(telegram_id):
     """ проверка клиента в бд """
     conn = sqlite3.connect('base.db')
     cursor = conn.cursor()
-    all_masters = cursor.execute(f"SELECT id FROM clients WHERE id_telegram='{telegram_id}'").fetchall()[0]
-    return all_masters
+    client_id = cursor.execute(f"SELECT id FROM clients WHERE id_telegram='{telegram_id}'").fetchall()
+    return client_id
 
 
-def sql_create_client(id_telegram, fio, phone):
-    """ добавить клиента в бд """
+def sql_get_info_master(id_master):
+    """ вся инфа о мастере """
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    info_masters = cursor.execute(f"SELECT name, description FROM masters WHERE id='{id_master}'").fetchall()[0]
+    return info_masters
+
+
+def sql_get_all_services_noid():
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_services = cursor.execute("SELECT id, name FROM services").fetchall()
+    return all_services
+
+
+def sql_get_all_info_service(service_id):
+    conn = sqlite3.connect('base.db')
+    cursor = conn.cursor()
+    all_info = cursor.execute(f"SELECT name, price, time FROM services WHERE id={service_id}").fetchall()[0]
+    return all_info
+
+
+def sql_delete_master(id_master):
+    """ удаление мастера """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
         cursor.execute(
-            f"INSERT INTO clients(id_telegram, fio, phone) VALUES('{id_telegram}', '{fio}', '{phone}')")
+            f"DELETE FROM masters WHERE id='{id_master}'")
+        cursor.execute(
+            f"DELETE FROM master_skills WHERE id_master='{id_master}'")
         conn.commit()
         cursor.close()
     except sqlite3.Error as error:
         error_text = f"Error add new services schedule: {error}"
         print(error_text)
 
-# id_master, id_client, id_service, date
-def sql_add_sale(id_master, id_client, id_service, date):
-    """ добавить запись в бд """
+
+def sql_delete_service(service_id):
+    """ удаление услуги """
     try:
         conn = sqlite3.connect('base.db')
         cursor = conn.cursor()
         cursor.execute(
-            f"INSERT INTO schedule(id_master, id_client, id_service, date) VALUES('{id_master}', '{id_client}', '{id_service}', '{date}')")
+            f"DELETE FROM services WHERE id='{service_id}'")
+        cursor.execute(
+            f"DELETE FROM services_category WHERE id_service='{service_id}'")
+        cursor.execute(
+            f"DELETE FROM master_skills WHERE id_service='{service_id}'")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new services schedule: {error}"
+        print(error_text)
+
+
+def sql_delete_category(category_id):
+    """ удаление категории """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            f"DELETE FROM categories WHERE id='{category_id}'")
+        cursor.execute(
+            f"DELETE FROM services_category WHERE id_category='{category_id}'")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new services schedule: {error}"
+        print(error_text)
+
+
+def sql_edit_master(id_master, master_name, master_description):
+    """ редактирование мастера """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        print(id_master, master_name, master_description)
+        cursor.execute(
+            f"UPDATE masters SET name='{master_name}', description='{master_description}' WHERE id={int(id_master)}")
+        conn.commit()
+        cursor.close()
+    except sqlite3.Error as error:
+        error_text = f"Error add new services schedule: {error}"
+        print(error_text)
+
+
+def sql_edit_service(service_id, service_name, service_price, service_time):
+    """ редактирование услуги """
+    try:
+        conn = sqlite3.connect('base.db')
+        cursor = conn.cursor()
+        print(id_master, master_name, master_description)
+        cursor.execute(
+            f"UPDATE services SET name='{service_name}', price='{service_price}', time='{service_time}' WHERE id={int(service_id)}")
         conn.commit()
         cursor.close()
     except sqlite3.Error as error:

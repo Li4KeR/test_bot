@@ -4,6 +4,8 @@ from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.contrib.middlewares.logging import LoggingMiddleware
 
 
+admins = (724885043, 853337288)
+operators = (724885043, 853337288)
 # token = '6161217114:AAFeSrYVhOx7is3vJiLYADJet6eiCxbO34Q'
 token = '6161217114:AAFeSrYVhOx7is3vJiLYADJet6eiCxbO34Q'
 # logging.basicConfig(level=logging.INFO, format = "%(asctime)s - %(levelname)s - %(funcName)s: %(lineno)d - %(message)s", filename=log_path, )
@@ -13,3 +15,4 @@ bot = Bot(token=token)
 storage = MemoryStorage()
 dp = Dispatcher(bot, storage=storage)
 dp.middleware.setup(LoggingMiddleware())
+

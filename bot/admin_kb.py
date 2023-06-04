@@ -8,8 +8,8 @@ def create_menu_admin():
     menu = types.InlineKeyboardMarkup(row_width=2)
     menu.add(
         InlineKeyboardButton(text="Добавить", callback_data="AdminAdd"),
-        InlineKeyboardButton(text="Посмотреть", callback_data="AdminSelect"),
-        InlineKeyboardButton(text="Удалить\редактировать", callback_data="AdminDelete"),
+        # InlineKeyboardButton(text="Посмотреть", callback_data="AdminSelect"),
+        InlineKeyboardButton(text="Удалить или изменить", callback_data="AdminDelete"),
         InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
     )
     return menu
@@ -60,10 +60,16 @@ def create_menu_relation_old_category():
 def create_menu_relation_old_category_service(category_id):
     """ создание меню выбора всех услуг в выбранной категории """
     all_services = sql_get_all_services(category_id)
+    print(all_services)
+    if all_services == []:
+        check = False
+    else:
+        check = True
     menu = types.InlineKeyboardMarkup(row_width=2)
     menu.add(*[InlineKeyboardButton(button[1], callback_data=f"AllServicesInCategoryRelation_{button[0]}")
                for button in all_services])
-    return menu
+    menu.add(InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain"))
+    return menu, check
 
 
 def create_menu_relation_all_category():
@@ -141,21 +147,73 @@ def create_menu_delete_admin():
     """ создание меню админа для удаления """
     menu = types.InlineKeyboardMarkup(row_width=2)
     menu.add(
-        InlineKeyboardButton(text="Ебнуть мастера", callback_data="AdminDeleteMaster"),
-        InlineKeyboardButton(text="Ебнуть услугу", callback_data="DeleteServiceAdmin"),
-        InlineKeyboardButton(text="Убнуть категорию", callback_data="DeleteCategoryAdmin"),
+        InlineKeyboardButton(text="Удалить мастера", callback_data="AdminMasterDelete"),
+        InlineKeyboardButton(text="Удалить услугу", callback_data="DeleteServiceAdmin"),
+        InlineKeyboardButton(text="Удалить категорию", callback_data="DeleteCategoryAdmin"),
         InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
     )
     return menu
 
 
-def create_menu_master_delete_admin():
+def create_menu_main_master_delete_admin():
     """ создание меню выбора удаления мастера """
     all_masters = sql_get_all_masters()
     menu = types.InlineKeyboardMarkup(row_width=2)
     menu.add(*[InlineKeyboardButton(button[1], callback_data=f"DeleteMaster_{button[0]}")
-               for button in all_masters]
+               for button in all_masters],
+             InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
              )
     return menu
 
+
+def create_menu_master_delete_admin(master_id):
+    """ Меню инфы о мастере и выбор что сделать """
+    master_info = sql_get_info_master(master_id)
+    master_name = master_info[0]
+    master_description = master_info[1]
+    menu = types.InlineKeyboardMarkup(row_width=2)
+    menu.add(
+        InlineKeyboardButton(text="Удалить", callback_data=f"DeleteBDMaster_{master_id}"),
+        InlineKeyboardButton(text="Изменить", callback_data=f"EditBDMaster_{master_id}"),
+        InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
+    )
+    return menu, master_name, master_description
+
+
+def create_main_menu_service_delete_admin():
+    """ Создание меню всех услуг для удаления """
+    all_services = sql_get_all_services_noid()
+    menu = types.InlineKeyboardMarkup(row_width=2)
+    menu.add(*[InlineKeyboardButton(button[1], callback_data=f"DeleteService_{button[0]}")
+               for button in all_services],
+             InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
+             )
+    return menu
+
+
+def create_menu_service_delete_admin(service_id):
+    """ Меню инфы об услуге и выбор что сделать """
+    service_info = sql_get_all_info_service(service_id)
+    print(service_info)
+    service_name = service_info[0]
+    service_price = service_info[1]
+    service_time = service_info[2]
+    menu = types.InlineKeyboardMarkup(row_width=2)
+    menu.add(
+        InlineKeyboardButton(text="Удалить", callback_data=f"DeleteBDService_{service_id}"),
+        InlineKeyboardButton(text="Изменить", callback_data=f"EditBDService_{service_id}"),
+        InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
+    )
+    return menu, service_name, service_price, service_time
+
+
+def create_main_menu_category_delete_admin():
+    """ Создание меню всех категорий для удаления """
+    all_categorry = sql_get_all_category()
+    menu = types.InlineKeyboardMarkup(row_width=2)
+    menu.add(*[InlineKeyboardButton(button[1], callback_data=f"DeleteCategory_{button[0]}")
+               for button in all_categorry],
+             InlineKeyboardButton(text="Главное меню", callback_data="ADMINmain")
+             )
+    return menu
 

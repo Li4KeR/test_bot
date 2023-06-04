@@ -42,3 +42,17 @@ class AddRelationMaster(StatesGroup):
     service_id = State()            #
     service_name = State()          #
 
+
+class RenameMaster(StatesGroup):
+    master_id = State()             #
+    master_name = State()           #
+    master_description = State()    #
+
+
+class RenameService(StatesGroup):
+    service_id = State()            #
+    service_name = State()          #
+    service_price = State()         #
+    service_time = State()          #
+
+
